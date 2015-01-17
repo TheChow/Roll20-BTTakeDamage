@@ -20,7 +20,10 @@ var BTTakeDamage = BTTakeDamage || {
         
         var currInternal = locAttr.get("current");
         if (currInternal === 0) {
-            if (loc === 'ct') return;
+            if (loc === 'ct' || loc === 'hd') {
+                sendChat(gameInfo.who, gameInfo.mechName + " has already been destroyed.");
+                return;
+            }
             var cascadeLoc = this._cascadeMap[loc];
             sendChat(gameInfo.who, gameInfo.mechName + " has nothing at " + loc.toUpperCase() + ", damage cascades to " + 
                 cascadeLoc.toUpperCase() + ".");
@@ -36,8 +39,8 @@ var BTTakeDamage = BTTakeDamage || {
             var cascadeLoc = this._cascadeMap[loc];
             var newDam = dam - locAttr.get("current", 0);
             locAttr.set("current", 0);
-            if (loc === 'ct'){
-                sendChat(gameInfo.who, gameInfo.mechName + " is cored!  Mech destroyed!");
+            if (loc === 'ct' || loc === 'hd'){
+                sendChat(gameInfo.who, gameInfo.mechName + " is destroyed!");
                 return;
             }
             
@@ -103,7 +106,7 @@ on("chat:message", function (msg) {
     if (msg.type == "api" && msg.content.indexOf("!td") !== -1) {
         var params = msg.content.split(" ");
         if (params.length !== 3) return;
-        var loc = params[1];
+        var loc = params[1].toLowerCase();
         var dam = params[2].toLowerCase();
         //log(msg.playerid);
         
