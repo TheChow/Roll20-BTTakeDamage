@@ -5,54 +5,48 @@ var BTTakeDamage = BTTakeDamage || (function() {
         gameInfo.mechName = getAttrByName(gameInfo.characterId, "mech_name");
         //log ("[BTTakeDamage] loc: " + loc + " dam: " + dam + " gameInfo: " + JSON.stringify(gameInfo));
         hitArmor(loc, dam, gameInfo);
-        /*
-        var locarmor = loc + "_armor";
-        var locAttr = findObjs({
-            _characterid: gameInfo.characterId,
-            _type: "attribute",
-            name: locarmor,
-        })[0];
-        */
     }
 
     function hitInternal(loc, dam, gameInfo) {
-        if (loc.length === 3) 
-            loc = loc.substr(0,2);
+        //if (loc.length === 3) 
+        //    loc = loc.substr(0,2);
 
         var locAttr = findObjs({
             _characterid: gameInfo.characterId,
             _type: "attribute",
-            name: _attributeMap[loc] + "_internalstructure",
+          name: _attributeMap[loc.length === 3 ? loc.substr(0,2) : loc] + "_internalstructure",
         })[0];
         
         var currInternal = locAttr.get("current");
+        var cascadeLoc;
         if (currInternal === 0) {
             if (loc === 'ct' || loc === 'hd') {
-                sendChat(gameInfo.who, gameInfo.mechName + " has already been destroyed.");
+                gameInfo.msg = buildMessageString(gameInfo.msg) + gameInfo.mechName + 
+                    " has already been destroyed.";
                 return;
             }
-            var cascadeLoc = _cascadeMap[loc];
-            sendChat(gameInfo.who, gameInfo.mechName + " has nothing at " + loc.toUpperCase() + ", damage cascades to " + 
-                cascadeLoc.toUpperCase() + ".");
+            cascadeLoc = _cascadeMap[loc];
+            gameInfo.msg = buildMessageString(gameInfo.msg) + gameInfo.mechName + 
+                " has nothing at " + loc.toUpperCase() + ", damage cascades to " + cascadeLoc.toUpperCase() + ".";
             return hitArmor(cascadeLoc, dam, gameInfo);
         } 
         
         if (parseInt(dam) <= parseInt(currInternal)) {
             locAttr.set("current", locAttr.get("current") - dam);
-            sendChat(gameInfo.who, gameInfo.mechName + " internal structure at " + loc.toUpperCase() + " took " + 
-                dam + " damage.");
+            gameInfo.msg = buildMessageString(gameInfo.msg) + gameInfo.mechName + 
+                " internal structure at " + loc.toUpperCase() + " took " + dam + " damage.";
         }        
         else {
             cascadeLoc = _cascadeMap[loc];
             var newDam = dam - locAttr.get("current", 0);
             locAttr.set("current", 0);
             if (loc === 'ct' || loc === 'hd'){
-                sendChat(gameInfo.who, gameInfo.mechName + " is destroyed!");
+                gameInfo.msg = buildMessageString(gameInfo.msg)  + gameInfo.mechName + " is destroyed!";
                 return;
             }
             
-            sendChat(gameInfo.who, gameInfo.mechName + "'s " + loc.toUpperCase() + " was destroyed.  Damage cascades to " + 
-                cascadeLoc.toUpperCase() + ".");
+            gameInfo.msg = buildMessageString(gameInfo.msg)  + gameInfo.mechName + "'s " + 
+                loc.toUpperCase() + " was destroyed.  Damage cascades to " + cascadeLoc.toUpperCase() + ".";
                 return hitArmor(cascadeLoc, newDam, gameInfo);
         }
     }
@@ -65,7 +59,7 @@ var BTTakeDamage = BTTakeDamage || (function() {
         })[0];        
 
         if (locAttr === null || typeof locAttr === "undefined") {
-            log("[BTTakeDamage.hitArmor] loc: " + loc + " dam: " + dam +" gameInfo.characaterId: " + gameInfo.characaterId);
+            log("[BTTakeDamage.hitArmor] locAttr not defined. loc: " + loc + " dam: " + dam +" gameInfo.characterId: " + gameInfo.characterId);
             return;
         }
         var currArmor = locAttr.get("current");    
@@ -82,12 +76,14 @@ var BTTakeDamage = BTTakeDamage || (function() {
         if (parseInt(dam) > parseInt(currArmor)) {
             locAttr.set("current", 0);
             dam -= currArmor;
-            sendChat(gameInfo.who, gameInfo.mechName + " armor at " + loc.toUpperCase() + " is gone.  Damage goes internal.");
+            gameInfo.msg = buildMessageString(gameInfo.msg) + gameInfo.mechName + 
+                " armor at " + loc.toUpperCase() + " is gone.  Damage goes internal.";
             return hitInternal(loc, dam, gameInfo);
         }                 
         
-        locAttr.set("current", currArmor - dam);        
-        sendChat(gameInfo.who, gameInfo.mechName + " was hit in the " + loc.toUpperCase() + " for " + dam + " damage.");
+        locAttr.set("current", currArmor - dam);
+        gameInfo.msg = buildMessageString(gameInfo.msg)  +  gameInfo.mechName + 
+            " was hit in the " + loc.toUpperCase() + " for " + dam + " damage.";
     }
     
     function criticalHitMech(characterId, loc) {
@@ -111,7 +107,7 @@ var BTTakeDamage = BTTakeDamage || (function() {
             log("BTTakeDamage.criticalHitMech: " + componentName);
             //criticalhit_lefttorso_b4 = 1 when hit, 0 or undefined when not-hit
             //lefttorso_b4            
-        } while (component === null || s++ < 10) 
+        } while (component === null || s++ < 10);
     }
     
     // returns number of critical hits based upon hit location.  -1 if the limb is blown off.
@@ -132,44 +128,56 @@ var BTTakeDamage = BTTakeDamage || (function() {
             case 11:
                 return 2;
             case 12:
-                if (loc === null || loc !== 'lt' || loc !== 'rt' || loc !== 'ct')
+                if (loc === null || loc === 'lt' || loc === 'rt' || loc === 'ct' || 
+                    loc === 'ltr' || loc === 'rtr' || loc === 'ctr')
                     return 3;
                 return -1;
         }
     }
     
+    function buildMessageString(msg) { 
+        return (_.isString(msg) ? msg + "<br/>" : "");
+    }
+    
     // used for mapping the root of the attirbute, doesn't include indicator such as "armor" or "internalstructure"
-    _attributeMap = {
+    var _attributeMap = {
         "hd": "head",
         "lt": "lefttorso",
         "la": "leftarm",
         "ll": "leftleg",
         "ltr": "lefttorso_rear",
+        "lar": "leftarm",
+        "llr": "leftleg",
         "rt": "righttorso",
         "ra": "rightarm",
         "rl": "rightleg",
         "rtr": "righttorso_rear",
+        "rar": "rightarm",
+        "rlr": "rightleg",
         "ct": "centertorso",
         "ctr": "centertorso_rear",
     };
 
-    _cascadeMap = {
+    var _cascadeMap = {
         "ll" : "lt",
         "la" : "lt",
         "lt" : "ct",
         "rl" : "rt",
         "ra" : "rt",
-        "rt" : "ct",        
+        "rt" : "ct",
+        "rtr" : "ctr",
+        "ltr" : "ctr",
+        "llr" : "ltr",
+        "lar" : "ltr",
+        "rar" : "rtr",
+        "rlr" : "rtr",
     };
     
     return {
-		HitMech : hitMech,
+        HitMech : hitMech,
         CriticalHitMech : criticalHitMech
-	};
+    };
 })();
-
-
-
 
 on("chat:message", function (msg) {
     if (msg.type == "api" && msg.content.indexOf("!td") !== -1) {
@@ -188,12 +196,9 @@ on("chat:message", function (msg) {
             return;
         }        
         var character = currentChars[0];
-        
+        var gameInfo = { characterId: character.id, who: msg.who };
         log("[BTTakeDamage] playerid: " + msg.playerid + " characterId: "  + character.id);
-        BTTakeDamage.HitMech(loc, dam, { characterId: character.id, who: msg.who });
-    }
-    
-    if (msg.type == "api" && msg.content.indexOf("!ch") !== -1) {        
-        BTTakeDamage.CriticalHitMech("-Jcr6ZjLEX_hLTmW168C", "LL");
-    }
+        BTTakeDamage.HitMech(loc, dam, gameInfo);
+        sendChat(msg.who, gameInfo.msg);
+    }    
 });
