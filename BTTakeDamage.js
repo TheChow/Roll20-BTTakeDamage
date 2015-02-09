@@ -20,7 +20,8 @@ var BTTakeDamage = BTTakeDamage || (function() {
         var currInternal = locAttr.get("current");
         var cascadeLoc;
         if (currInternal === 0) {
-            if (loc === 'ct' || loc === 'hd') {
+            if (loc === 'ct' || loc === 'ctr' || loc === 'hd') {
+                log("[BTTakeDamage.hitInternal] loc: " + loc + " locAttr: " + locAttr);
                 gameInfo.msg = buildMessageString(gameInfo.msg) + gameInfo.mechName + 
                     " has already been destroyed.";
                 return;
@@ -31,16 +32,21 @@ var BTTakeDamage = BTTakeDamage || (function() {
             return hitArmor(cascadeLoc, dam, gameInfo);
         } 
         
-        if (parseInt(dam) <= parseInt(currInternal)) {
+        dam = parseInt(dam);
+        currInternal = parseInt(currInternal);        
+        
+        if (dam <= currInternal) {
             locAttr.set("current", locAttr.get("current") - dam);
             gameInfo.msg = buildMessageString(gameInfo.msg) + gameInfo.mechName + 
-                " internal structure at " + loc.toUpperCase() + " took " + dam + " damage.";
+                " internal structure at " + loc.toUpperCase() + " took " + dam + 
+                " damage.  Possible crit to " + loc.toUpperCase() + ".";
         }        
         else {
             cascadeLoc = _cascadeMap[loc];
             var newDam = dam - locAttr.get("current", 0);
             locAttr.set("current", 0);
-            if (loc === 'ct' || loc === 'hd'){
+            if (loc === 'ct' || loc === 'hd' || loc === 'ctr') {
+                //log("[BTTakeDamage.hitInternal] loc: " + loc + " locAttr: " + locAttr);
                 gameInfo.msg = buildMessageString(gameInfo.msg)  + gameInfo.mechName + " is destroyed!";
                 return;
             }
