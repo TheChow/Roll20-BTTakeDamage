@@ -20,8 +20,7 @@ var BTTakeDamage = BTTakeDamage || (function() {
         var currInternal = locAttr.get("current");
         var cascadeLoc;
         if (currInternal === 0) {
-            if (loc === 'ct' || loc === 'ctr' || loc === 'hd') {
-                log("[BTTakeDamage.hitInternal] loc: " + loc + " locAttr: " + locAttr);
+            if (loc === 'ct' || loc === 'hd') {
                 gameInfo.msg = buildMessageString(gameInfo.msg) + gameInfo.mechName + 
                     " has already been destroyed.";
                 return;
@@ -32,21 +31,16 @@ var BTTakeDamage = BTTakeDamage || (function() {
             return hitArmor(cascadeLoc, dam, gameInfo);
         } 
         
-        dam = parseInt(dam);
-        currInternal = parseInt(currInternal);        
-        
-        if (dam <= currInternal) {
+        if (parseInt(dam) <= parseInt(currInternal)) {
             locAttr.set("current", locAttr.get("current") - dam);
             gameInfo.msg = buildMessageString(gameInfo.msg) + gameInfo.mechName + 
-                " internal structure at " + loc.toUpperCase() + " took " + dam + 
-                " damage.  Possible crit to " + loc.toUpperCase() + ".";
+                " internal structure at " + loc.toUpperCase() + " took " + dam + " damage.";
         }        
         else {
             cascadeLoc = _cascadeMap[loc];
             var newDam = dam - locAttr.get("current", 0);
             locAttr.set("current", 0);
-            if (loc === 'ct' || loc === 'hd' || loc === 'ctr') {
-                //log("[BTTakeDamage.hitInternal] loc: " + loc + " locAttr: " + locAttr);
+            if (loc === 'ct' || loc === 'hd'){
                 gameInfo.msg = buildMessageString(gameInfo.msg)  + gameInfo.mechName + " is destroyed!";
                 return;
             }
@@ -204,7 +198,9 @@ on("chat:message", function (msg) {
         var character = currentChars[0];
         var gameInfo = { characterId: character.id, who: msg.who };
         log("[BTTakeDamage] playerid: " + msg.playerid + " characterId: "  + character.id);
-        BTTakeDamage.HitMech(loc, dam, gameInfo);
-        sendChat(msg.who, gameInfo.msg);
+        if (_.isNumber(dam) && _.isString(loc)){
+            BTTakeDamage.HitMech(loc, dam, gameInfo);
+            sendChat(msg.who, gameInfo.msg);   
+        }
     }    
 });
